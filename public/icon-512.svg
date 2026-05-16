@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#07090d"/>
+  <path d="M72 360 L192 248 L268 312 L440 152" fill="none" stroke="#7cf5c0" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="440" cy="152" r="20" fill="#7cf5c0"/>
+  <text x="72" y="460" font-family="ui-sans-serif,system-ui,sans-serif" font-size="58" font-weight="700" fill="#e6edf7">InvestTrack</text>
+</svg>

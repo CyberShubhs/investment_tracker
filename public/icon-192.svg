@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="36" fill="#07090d"/>
+  <path d="M28 132 L72 92 L100 116 L164 56" fill="none" stroke="#7cf5c0" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="164" cy="56" r="8" fill="#7cf5c0"/>
+  <text x="28" y="170" font-family="ui-sans-serif,system-ui,sans-serif" font-size="22" font-weight="700" fill="#e6edf7">IT</text>
+</svg>
