@@ -51,5 +51,35 @@ export function makeDemoDB(): DB {
     { id: uid("i"), provider: "Open Banking", status: "planned" as const, notes: "Future bank account sync", created_at: iso(-1) },
   ];
 
-  return { assets, liabilities, transactions: [], snapshots, integrations };
+  const ymd = (offsetDays = 0) => iso(offsetDays).slice(0, 10);
+
+  const cashflow_categories = [
+    { id: uid("c"), name: "Salary", direction: "income" as const, created_at: iso(-300) },
+    { id: uid("c"), name: "Dividends", direction: "income" as const, created_at: iso(-300) },
+    { id: uid("c"), name: "Rent", direction: "expense" as const, created_at: iso(-300) },
+    { id: uid("c"), name: "Groceries", direction: "expense" as const, created_at: iso(-300) },
+    { id: uid("c"), name: "Utilities", direction: "expense" as const, created_at: iso(-300) },
+    { id: uid("c"), name: "Subscriptions", direction: "expense" as const, created_at: iso(-300) },
+  ];
+
+  const cashflow_entries = [
+    { id: uid("e"), date: ymd(-3), direction: "income" as const, amount: 6400, category_id: cashflow_categories[0].id, notes: "Monthly salary", created_at: iso(-3) },
+    { id: uid("e"), date: ymd(-6), direction: "expense" as const, amount: 2150, category_id: cashflow_categories[2].id, created_at: iso(-6) },
+    { id: uid("e"), date: ymd(-4), direction: "expense" as const, amount: 185, category_id: cashflow_categories[3].id, created_at: iso(-4) },
+    { id: uid("e"), date: ymd(-2), direction: "expense" as const, amount: 62, category_id: cashflow_categories[5].id, notes: "Streaming + music", created_at: iso(-2) },
+    { id: uid("e"), date: ymd(-33), direction: "income" as const, amount: 6400, category_id: cashflow_categories[0].id, notes: "Monthly salary", created_at: iso(-33) },
+    { id: uid("e"), date: ymd(-35), direction: "expense" as const, amount: 2150, category_id: cashflow_categories[2].id, created_at: iso(-35) },
+    { id: uid("e"), date: ymd(-37), direction: "expense" as const, amount: 240, category_id: cashflow_categories[3].id, created_at: iso(-37) },
+  ];
+
+  return {
+    assets,
+    liabilities,
+    transactions: [],
+    snapshots,
+    integrations,
+    cashflow_categories,
+    cashflow_entries,
+    recurring_rules: [],
+  };
 }

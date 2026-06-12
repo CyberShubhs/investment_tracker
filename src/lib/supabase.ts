@@ -13,3 +13,11 @@ export function getSupabase(): SupabaseClient | null {
   _client = createClient(url!, key!);
   return _client;
 }
+
+/** Access token for calling our own API routes (Authorization: Bearer ...). */
+export async function getAccessToken(): Promise<string | null> {
+  const client = getSupabase();
+  if (!client) return null;
+  const { data } = await client.auth.getSession();
+  return data.session?.access_token ?? null;
+}

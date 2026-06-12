@@ -7,8 +7,12 @@ export type AssetType =
   | "vehicle"
   | "super"
   | "jewellery"
+  | "metal"
+  | "equipment"
   | "business"
   | "other";
+
+export type PriceSource = "manual" | "coinspot" | "yahoo" | "coingecko" | "paxg";
 
 export type LiabilityType =
   | "mortgage"
@@ -43,6 +47,19 @@ export interface Asset {
   current_value: number;
   currency: string;
   notes?: string;
+  /** Metal assets: weight in grams and purity (e.g. 0.9999). */
+  weight_grams?: number;
+  purity?: number;
+  /** Equipment assets: straight-line depreciation inputs. */
+  purchase_price?: number;
+  purchase_date?: string;
+  depreciation_years?: number;
+  salvage_value?: number;
+  /** Live pricing metadata. */
+  price_source?: PriceSource;
+  last_priced_at?: string;
+  /** Idempotency key for synced holdings, e.g. "coinspot:BTC". */
+  external_key?: string;
   created_at: string;
   updated_at: string;
 }
@@ -92,10 +109,46 @@ export interface Integration {
   created_at: string;
 }
 
+export type CashflowDirection = "income" | "expense";
+
+export interface CashflowCategory {
+  id: string;
+  name: string;
+  direction: CashflowDirection;
+  created_at: string;
+}
+
+export interface CashflowEntry {
+  id: string;
+  date: string;
+  direction: CashflowDirection;
+  amount: number;
+  category_id?: string | null;
+  notes?: string;
+  recurring_rule_id?: string | null;
+  created_at: string;
+}
+
+export interface RecurringRule {
+  id: string;
+  name: string;
+  direction: CashflowDirection;
+  amount: number;
+  category_id?: string | null;
+  frequency: Frequency;
+  start_date: string;
+  end_date?: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 export interface DB {
   assets: Asset[];
   liabilities: Liability[];
   transactions: Transaction[];
   snapshots: Snapshot[];
   integrations: Integration[];
+  cashflow_categories: CashflowCategory[];
+  cashflow_entries: CashflowEntry[];
+  recurring_rules: RecurringRule[];
 }
