@@ -1,5 +1,5 @@
 import { requireUser } from "@/lib/server/auth";
-import { fetchEquity, type EquityPrice } from "@/lib/server/prices";
+import { fetchAudPerUsd, fetchEquity, type EquityPrice } from "@/lib/server/prices";
 
 export async function GET(req: Request) {
   const auth = await requireUser(req);
@@ -24,5 +24,17 @@ export async function GET(req: Request) {
       }
     })
   );
-  return Response.json({ prices, errors });
+
+  // Include the FX rate whenever any result isn't AUD so the client can
+  // convert USD market values into AUD portfolio values.
+  let aud_per_usd: number | null = null;
+  if (Object.values(prices).some((p) => p.currency !== "AUD")) {
+    try {
+      aud_per_usd = await fetchAudPerUsd();
+    } catch (e) {
+      errors["FX"] = e instanceof Error ? e.message : "FX rate unavailable";
+    }
+  }
+
+  return Response.json({ prices, errors, aud_per_usd });
 }

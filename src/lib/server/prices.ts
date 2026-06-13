@@ -14,9 +14,10 @@ export interface EquityPrice {
   time: string;
 }
 
-/** ASX (or other Yahoo) price via the v8 chart endpoint. Symbol without suffix gets .AX. */
+/** Price via Yahoo's v8 chart endpoint. Symbol is used verbatim — callers
+ *  append .AX for ASX listings; bare symbols (AAPL) resolve to US listings. */
 export async function fetchEquity(symbol: string): Promise<EquityPrice> {
-  const yahooSymbol = symbol.includes(".") ? symbol : `${symbol}.AX`;
+  const yahooSymbol = symbol;
   let res: Response | null = null;
   for (const host of ["query1.finance.yahoo.com", "query2.finance.yahoo.com"]) {
     res = await fetch(
@@ -93,6 +94,24 @@ export async function fetchCryptoAud(symbols: string[]): Promise<CryptoPrices> {
     else prices[s.toUpperCase()] = { aud, time };
   }
   return { prices, errors };
+}
+
+/** AUD per 1 USD. Tries Yahoo AUDUSD=X, falls back to CoinGecko USDT/AUD. */
+export async function fetchAudPerUsd(): Promise<number> {
+  try {
+    const { price } = await fetchEquity("AUDUSD=X"); // USD per 1 AUD
+    if (price > 0) return 1 / price;
+  } catch {
+    /* fall through to CoinGecko */
+  }
+  const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=aud", {
+    next: { revalidate: 300 },
+  });
+  if (!res.ok) throw new Error(`FX rate unavailable (CoinGecko ${res.status})`);
+  const json = (await res.json()) as { tether?: { aud?: number } };
+  const rate = json.tether?.aud;
+  if (!rate) throw new Error("FX rate unavailable");
+  return rate;
 }
 
 export interface GoldPrice {

@@ -80,6 +80,7 @@ interface StoreCtx {
   db: DB;
   ready: boolean;
   syncStatus: SyncStatus;
+  syncError: string | null;
   totalAssets: number;
   totalLiabilities: number;
   netWorth: number;
@@ -114,10 +115,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [db, setDb] = useState<DB>(empty);
   const [ready, setReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(supabaseEnabled ? "loading" : "local");
+  const [syncError, setSyncError] = useState<string | null>(null);
   const userIdRef = useRef<string | null>(null);
   const hydratedRef = useRef(false);
 
-  // Fire-and-forget remote write; errors surface via syncStatus.
+  // Fire-and-forget remote write; errors surface via syncStatus + syncError.
   const remote = useCallback(
     (fn: (c: SupabaseClient, userId: string) => PromiseLike<{ error: unknown }>) => {
       const client = getSupabase();
@@ -126,6 +128,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       Promise.resolve(fn(client, userId)).then(({ error }) => {
         if (error) {
           console.error("Supabase write failed:", error);
+          const msg =
+            typeof error === "object" && error && "message" in error
+              ? String((error as { message: unknown }).message)
+              : String(error);
+          setSyncError(msg);
           setSyncStatus("error");
         }
       });
@@ -191,8 +198,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           recurring_rules: rules.map(M.rowToRule),
         };
 
-        // Seed default categories on first ever load.
-        if (next.cashflow_categories.length === 0 && next.cashflow_entries.length === 0) {
+        // Seed default categories whenever remote has none. Upsert with
+        // ignoreDuplicates makes this safe to retry on every load.
+        if (next.cashflow_categories.length === 0) {
           const now = new Date().toISOString();
           const cats: CashflowCategory[] = DEFAULT_CATEGORIES.map((c) => ({
             ...c,
@@ -200,7 +208,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             created_at: now,
           }));
           next = { ...next, cashflow_categories: cats };
-          remote((c, u) => c.from("cashflow_categories").insert(cats.map((cat) => M.categoryToRow(cat, u))));
+          remote((c, u) =>
+            c.from("cashflow_categories").upsert(
+              cats.map((cat) => M.categoryToRow(cat, u)),
+              { onConflict: "user_id,direction,name", ignoreDuplicates: true }
+            )
+          );
         }
 
         // Catch up recurring entries (idempotent across devices via unique constraint).
@@ -218,6 +231,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setDb(next);
         save(next);
         setSyncStatus("idle");
+        setSyncError(null);
       } catch (err) {
         console.error("Supabase hydrate failed:", err);
         setSyncStatus(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "error");
@@ -433,6 +447,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     db,
     ready,
     syncStatus,
+    syncError,
     totalAssets,
     totalLiabilities,
     netWorth,

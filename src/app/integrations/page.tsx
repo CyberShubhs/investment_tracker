@@ -25,12 +25,20 @@ const PLANNED = [
 
 type CommsecRow = CommsecHolding & { kind: "stock" | "etf" };
 
+// Common ETF tickers for a smarter default on import; user can still toggle per row.
+const KNOWN_ETFS = new Set([
+  "VAS", "VGS", "VTS", "VEU", "VDHG", "VHY", "A200", "IOZ", "IVV", "NDQ", "HACK", "IUSG", "ETHI", "FANG",
+  "SPY", "VOO", "VYM", "QQQ", "TQQQ", "VTI", "VT", "SCHD", "DIA", "IWM",
+]);
+
 export default function IntegrationsPage() {
   const {
     db,
     syncStatus,
+    syncError,
     addAsset,
     updateAsset,
+    removeAsset,
     addIntegration,
     updateIntegration,
     removeIntegration,
@@ -78,12 +86,10 @@ export default function IntegrationsPage() {
       const result = await syncCoinspot(db.assets, addAsset, updateAsset);
       setCsResult(result);
       markIntegration("CoinSpot", "active", "Read-only balance sync");
-      if (result.missing.length > 0) {
-        const names = result.missing.map((a) => a.symbol ?? a.name).join(", ");
-        if (confirm(`These CoinSpot holdings are no longer in your account: ${names}. Set their value to $0?`)) {
-          for (const a of result.missing) {
-            updateAsset(a.id, { quantity: 0, current_value: 0, last_priced_at: result.fetchedAt });
-          }
+      if (result.stale.length > 0) {
+        const names = result.stale.map((a) => a.symbol ?? a.name).join(", ");
+        if (confirm(`These CoinSpot holdings are gone or worth under $1 (dust): ${names}. Remove them?`)) {
+          for (const a of result.stale) removeAsset(a.id);
         }
       }
     } catch (e) {
@@ -103,7 +109,7 @@ export default function IntegrationsPage() {
       setCommsecRows(null);
       return;
     }
-    setCommsecRows(holdings.map((h) => ({ ...h, kind: "etf" as const })));
+    setCommsecRows(holdings.map((h) => ({ ...h, kind: KNOWN_ETFS.has(h.symbol) ? ("etf" as const) : ("stock" as const) })));
   };
 
   const confirmCommsecImport = async () => {
@@ -114,7 +120,12 @@ export default function IntegrationsPage() {
       const key = `commsec:${row.symbol}`;
       const existing = db.assets.find((a) => a.external_key === key);
       if (existing) {
-        updateAsset(existing.id, { quantity: row.quantity, avg_cost: row.avg_cost, type: row.kind });
+        updateAsset(existing.id, {
+          quantity: row.quantity,
+          avg_cost: row.avg_cost,
+          type: row.kind,
+          currency: row.currency,
+        });
         updated++;
       } else {
         addAsset({
@@ -125,7 +136,7 @@ export default function IntegrationsPage() {
           quantity: row.quantity,
           avg_cost: row.avg_cost,
           current_value: 0,
-          currency: "AUD",
+          currency: row.currency,
           external_key: key,
         });
         created++;
@@ -203,6 +214,11 @@ export default function IntegrationsPage() {
                 {syncStatus === "local" && "Local"}
               </span>
             </div>
+          )}
+          {syncError && (
+            <p className="text-xs text-danger leading-relaxed">
+              Last sync error: {syncError}. Reload the page to retry — your data re-syncs from the cloud.
+            </p>
           )}
           <p className="text-xs text-muted leading-relaxed">
             {supabaseEnabled

@@ -306,39 +306,58 @@ export default function AssetsPage() {
         {db.assets.length === 0 ? (
           <EmptyState title="No assets yet" hint="Cash, crypto, stocks, ETFs, property, gold, computers — add anything you own." />
         ) : (
-          <ul className="divide-y divide-bg-ring">
-            {db.assets.map((a) => (
-              <li key={a.id} className="py-3 flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-sm font-medium truncate">{a.name}</span>
-                    <span className="pill capitalize">{a.type}</span>
-                    {a.symbol && <span className="text-xs text-muted">{a.symbol}</span>}
-                    {isStale(a) && (
-                      <span
-                        className="h-2 w-2 rounded-full bg-amber-400 shrink-0"
-                        title={a.last_priced_at ? `Price from ${shortDate(a.last_priced_at)}` : "Never priced — hit Refresh prices"}
-                      />
-                    )}
+          <div className="space-y-5">
+            {TYPES.map((t) => {
+              const group = db.assets
+                .filter((a) => a.type === t.value)
+                .sort((a, b) => b.current_value - a.current_value);
+              if (group.length === 0) return null;
+              const subtotal = group.reduce((s, a) => s + a.current_value, 0);
+              return (
+                <div key={t.value}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted">
+                      {t.label} · {group.length}
+                    </span>
+                    <span className="text-xs font-semibold text-white/80">{money(subtotal)}</span>
                   </div>
-                  <div className="text-xs text-muted truncate">
-                    {a.provider || "—"}
-                    {a.quantity ? ` · ${a.quantity} units` : ""}
-                    {a.weight_grams ? ` · ${a.weight_grams} g` : ""}
-                    {a.avg_cost ? ` · avg ${money(a.avg_cost, true)}` : ""}
-                    {a.last_priced_at ? ` · priced ${shortDate(a.last_priced_at)}` : ""}
-                  </div>
+                  <ul className="divide-y divide-bg-ring border-t border-bg-ring">
+                    {group.map((a) => (
+                      <li key={a.id} className="py-3 flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-medium truncate">{a.name}</span>
+                            {a.symbol && <span className="text-xs text-muted">{a.symbol}</span>}
+                            {a.currency && a.currency !== "AUD" && <span className="pill text-[10px]">{a.currency}</span>}
+                            {isStale(a) && (
+                              <span
+                                className="h-2 w-2 rounded-full bg-amber-400 shrink-0"
+                                title={a.last_priced_at ? `Price from ${shortDate(a.last_priced_at)}` : "Never priced — hit Refresh prices"}
+                              />
+                            )}
+                          </div>
+                          <div className="text-xs text-muted truncate">
+                            {a.provider || "—"}
+                            {a.quantity ? ` · ${a.quantity} units` : ""}
+                            {a.weight_grams ? ` · ${a.weight_grams} g` : ""}
+                            {a.avg_cost ? ` · avg ${money(a.avg_cost, true)}` : ""}
+                            {a.last_priced_at ? ` · priced ${shortDate(a.last_priced_at)}` : ""}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold">{money(a.current_value)}</div>
+                          <div className="flex gap-1 justify-end mt-1">
+                            <button className="text-xs text-muted hover:text-white" onClick={() => startEdit(a)}>Edit</button>
+                            <button className="text-xs text-danger hover:underline" onClick={() => removeAsset(a.id)}>Delete</button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold">{money(a.current_value)}</div>
-                  <div className="flex gap-1 justify-end mt-1">
-                    <button className="text-xs text-muted hover:text-white" onClick={() => startEdit(a)}>Edit</button>
-                    <button className="text-xs text-danger hover:underline" onClick={() => removeAsset(a.id)}>Delete</button>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </div>
         )}
         {anyPriceable && (
           <p className="text-[11px] text-muted mt-3">

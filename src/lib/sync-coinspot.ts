@@ -1,13 +1,16 @@
 import type { Asset } from "./types";
-import { getAccessToken } from "./supabase";
+import { getAccessToken, getSupabase } from "./supabase";
+
+/** Holdings worth less than this (AUD) are dust — skipped on import. */
+const MIN_AUD_VALUE = 1;
 
 export interface CoinspotSyncResult {
   created: number;
   updated: number;
   totalAud: number;
   fetchedAt: string;
-  /** CoinSpot-synced assets no longer present in the API response. */
-  missing: Asset[];
+  /** CoinSpot-synced assets that are now gone or worth < $1 — candidates for removal. */
+  stale: Asset[];
 }
 
 type AddAsset = (a: Omit<Asset, "id" | "created_at" | "updated_at">) => void;
@@ -23,9 +26,13 @@ export async function coinspotStatus(): Promise<boolean> {
   return Boolean(json.configured);
 }
 
-/** Pull CoinSpot balances and upsert crypto assets keyed by external_key. */
+/**
+ * Pull CoinSpot balances and upsert crypto assets keyed by external_key.
+ * Matching uses the freshest asset list available (remote when signed in) so a
+ * stale local cache can't cause duplicate-key insert failures.
+ */
 export async function syncCoinspot(
-  assets: Asset[],
+  localAssets: Asset[],
   addAsset: AddAsset,
   updateAsset: UpdateAsset
 ): Promise<CoinspotSyncResult> {
@@ -41,7 +48,23 @@ export async function syncCoinspot(
   };
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
 
-  const balances = json.balances ?? [];
+  // Source of truth for "does this holding already exist": remote DB when available.
+  let assets = localAssets;
+  const client = getSupabase();
+  if (client) {
+    const { data } = await client.from("assets").select("id, external_key, current_value");
+    if (data) {
+      const byKey = new Map(data.filter((r) => r.external_key).map((r) => [r.external_key as string, r]));
+      assets = localAssets.filter((a) => !a.external_key || byKey.has(a.external_key));
+      for (const r of data) {
+        if (r.external_key && !localAssets.some((a) => a.id === r.id)) {
+          assets.push({ id: r.id, external_key: r.external_key, current_value: Number(r.current_value) } as Asset);
+        }
+      }
+    }
+  }
+
+  const balances = (json.balances ?? []).filter((b) => b.audValue >= MIN_AUD_VALUE);
   const fetchedAt = json.fetchedAt ?? new Date().toISOString();
   let created = 0;
   let updated = 0;
@@ -78,8 +101,8 @@ export async function syncCoinspot(
     }
   }
 
-  const missing = assets.filter(
+  const stale = assets.filter(
     (a) => a.external_key?.startsWith("coinspot:") && !seen.has(a.external_key)
   );
-  return { created, updated, totalAud, fetchedAt, missing };
+  return { created, updated, totalAud, fetchedAt, stale };
 }

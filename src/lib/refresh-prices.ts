@@ -36,24 +36,43 @@ export async function refreshPrices(assets: Asset[], updateAsset: UpdateAsset): 
   const jobs: Promise<void>[] = [];
 
   if (equities.length > 0) {
-    const symbols = Array.from(new Set(equities.map((a) => a.symbol!.toUpperCase())));
+    // ASX listings need the .AX suffix; USD-listed holdings (US stocks/ETFs)
+    // use the bare symbol and get converted to AUD with the returned FX rate.
+    const yahooSymbol = (a: Asset) =>
+      a.currency?.toUpperCase() === "USD" ? a.symbol!.toUpperCase() : `${a.symbol!.toUpperCase()}.AX`;
+    const symbols = Array.from(new Set(equities.map(yahooSymbol)));
     jobs.push(
       getJSON(`/api/prices/equities?symbols=${symbols.join(",")}`, token)
-        .then((data: { prices: Record<string, { price: number; time: string }>; errors: Record<string, string> }) => {
-          for (const a of equities) {
-            const p = data.prices[a.symbol!.toUpperCase()];
-            if (p) {
+        .then(
+          (data: {
+            prices: Record<string, { price: number; currency: string; time: string }>;
+            errors: Record<string, string>;
+            aud_per_usd: number | null;
+          }) => {
+            for (const a of equities) {
+              const key = yahooSymbol(a);
+              const p = data.prices[key];
+              if (!p) {
+                summary.failed.push({ symbol: a.symbol!, reason: data.errors[key] ?? "No price" });
+                continue;
+              }
+              let value = a.quantity! * p.price;
+              if (p.currency !== "AUD") {
+                if (!data.aud_per_usd) {
+                  summary.failed.push({ symbol: a.symbol!, reason: data.errors["FX"] ?? "FX rate unavailable" });
+                  continue;
+                }
+                value *= data.aud_per_usd;
+              }
               updateAsset(a.id, {
-                current_value: Math.round(a.quantity! * p.price * 100) / 100,
+                current_value: Math.round(value * 100) / 100,
                 price_source: "yahoo",
                 last_priced_at: p.time,
               });
               summary.updated++;
-            } else {
-              summary.failed.push({ symbol: a.symbol!, reason: data.errors[a.symbol!.toUpperCase()] ?? "No price" });
             }
           }
-        })
+        )
         .catch((e) => {
           for (const a of equities) summary.failed.push({ symbol: a.symbol!, reason: e.message });
         })

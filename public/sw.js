@@ -1,5 +1,5 @@
-const CACHE = "invest-track-v2";
-const ASSETS = ["/", "/manifest.json", "/icon-192.svg", "/icon-512.svg"];
+const CACHE = "invest-track-v3";
+const ASSETS = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

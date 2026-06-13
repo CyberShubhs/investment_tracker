@@ -11,3 +11,7 @@ dist
 .idea
 .vscode
 coverage
+.env*
+
+# Personal broker exports — never commit
+Holdings_*.csv
