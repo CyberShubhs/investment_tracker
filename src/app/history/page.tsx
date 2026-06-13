@@ -58,7 +58,7 @@ export default function HistoryPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-semibold">{money(s.net_worth)}</div>
+                  <div className="num text-sm font-semibold">{money(s.net_worth)}</div>
                   <button className="text-xs text-danger hover:underline" onClick={() => removeSnapshot(s.id)}>Delete</button>
                 </div>
               </li>

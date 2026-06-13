@@ -329,7 +329,7 @@ export default function CashflowPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className={`text-sm font-semibold ${e.direction === "income" ? "text-accent" : "text-danger"}`}>
+                  <div className={`num text-sm font-semibold ${e.direction === "income" ? "text-accent" : "text-danger"}`}>
                     {e.direction === "income" ? "+" : "−"}{money(e.amount)}
                   </div>
                   <div className="flex gap-1 justify-end mt-0.5">
@@ -441,7 +441,7 @@ export default function CashflowPage() {
                     {r.end_date ? ` to ${shortDate(r.end_date)}` : ""}
                   </div>
                 </div>
-                <div className={`text-sm font-semibold ${r.direction === "income" ? "text-accent" : "text-danger"}`}>
+                <div className={`num text-sm font-semibold ${r.direction === "income" ? "text-accent" : "text-danger"}`}>
                   {r.direction === "income" ? "+" : "−"}{money(r.amount)}
                 </div>
                 <div className="flex gap-1">

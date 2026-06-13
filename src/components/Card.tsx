@@ -13,10 +13,10 @@ export function StatCard({
 }) {
   const toneCls = tone === "good" ? "text-accent" : tone === "bad" ? "text-danger" : "text-white";
   return (
-    <div className="card p-4 sm:p-5">
-      <div className="label">{label}</div>
+    <div className="card p-4">
+      <div className="label !mb-1">{label}</div>
       <div className={`stat-num ${toneCls}`}>{value}</div>
-      {sub && <div className="text-xs text-muted mt-1">{sub}</div>}
+      {sub && <div className="num text-xs text-muted mt-1">{sub}</div>}
     </div>
   );
 }
@@ -32,8 +32,8 @@ export function SectionCard({
 }) {
   return (
     <section className="card p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3 gap-3">
-        <h2 className="text-sm font-semibold text-white">{title}</h2>
+      <div className="flex items-center justify-between mb-3.5 gap-3">
+        <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-white/70">{title}</h2>
         {action}
       </div>
       {children}
@@ -45,7 +45,7 @@ export function EmptyState({ title, hint, action }: { title: string; hint?: stri
   return (
     <div className="text-center py-10 px-4 border border-dashed border-bg-ring rounded-xl">
       <div className="text-sm font-medium text-white">{title}</div>
-      {hint && <div className="text-xs text-muted mt-1 max-w-sm mx-auto">{hint}</div>}
+      {hint && <div className="text-xs text-muted mt-1.5 max-w-sm mx-auto leading-relaxed">{hint}</div>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

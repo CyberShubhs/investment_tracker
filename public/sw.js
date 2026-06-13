@@ -1,4 +1,4 @@
-const CACHE = "invest-track-v3";
+const CACHE = "invest-track-v4";
 const ASSETS = ["/", "/manifest.json", "/icon-192.png", "/icon-512.png", "/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {

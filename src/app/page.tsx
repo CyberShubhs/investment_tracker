@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { StatCard, SectionCard, EmptyState } from "@/components/Card";
+import { SectionCard, EmptyState } from "@/components/Card";
 import { AllocationPie, NetWorthArea } from "@/components/Charts";
 import { money, pct, shortDate } from "@/lib/format";
 import { refreshPrices, isStale, type RefreshSummary } from "@/lib/refresh-prices";
@@ -40,28 +40,27 @@ export default function DashboardPage() {
     useStore();
   const [busy, setBusy] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<"assets" | "debts">("assets");
 
   const allocation = useMemo(() => {
     const map = new Map<string, number>();
-    for (const a of db.assets) {
-      map.set(a.type, (map.get(a.type) ?? 0) + a.current_value);
-    }
+    for (const a of db.assets) map.set(a.type, (map.get(a.type) ?? 0) + a.current_value);
     return Array.from(map.entries()).map(([k, v]) => ({ name: ASSET_LABEL[k] ?? k, value: v }));
   }, [db.assets]);
 
   const liabilityBreakdown = useMemo(() => {
     const map = new Map<string, number>();
-    for (const l of db.liabilities) {
-      map.set(l.type, (map.get(l.type) ?? 0) + l.balance);
-    }
+    for (const l of db.liabilities) map.set(l.type, (map.get(l.type) ?? 0) + l.balance);
     return Array.from(map.entries()).map(([k, v]) => ({ name: LIAB_LABEL[k] ?? k, value: v }));
   }, [db.liabilities]);
 
-  const history = useMemo(() => {
-    return [...db.snapshots]
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .map((s) => ({ date: s.date, net_worth: s.net_worth }));
-  }, [db.snapshots]);
+  const history = useMemo(
+    () =>
+      [...db.snapshots]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((s) => ({ date: s.date, net_worth: s.net_worth })),
+    [db.snapshots]
+  );
 
   const monthlyChange = useMemo(() => {
     const sorted = [...db.snapshots].sort((a, b) => a.date.localeCompare(b.date));
@@ -69,8 +68,7 @@ export default function DashboardPage() {
     const last = sorted[sorted.length - 1];
     const prev = sorted[sorted.length - 2];
     const diff = last.net_worth - prev.net_worth;
-    const pctChange = prev.net_worth !== 0 ? (diff / Math.abs(prev.net_worth)) * 100 : 0;
-    return { diff, pct: pctChange };
+    return { diff, pct: prev.net_worth !== 0 ? (diff / Math.abs(prev.net_worth)) * 100 : 0 };
   }, [db.snapshots]);
 
   const cashflowMonth = useMemo(() => {
@@ -105,9 +103,7 @@ export default function DashboardPage() {
     setActionMsg(null);
     try {
       const r: RefreshSummary = await refreshPrices(db.assets, updateAsset);
-      setActionMsg(
-        `${r.updated} price${r.updated === 1 ? "" : "s"} updated${r.failed.length ? `, ${r.failed.length} failed` : ""}.`
-      );
+      setActionMsg(`${r.updated} updated${r.failed.length ? `, ${r.failed.length} failed` : ""}`);
     } catch (e) {
       setActionMsg(e instanceof Error ? e.message : "Refresh failed");
     } finally {
@@ -120,7 +116,7 @@ export default function DashboardPage() {
     setActionMsg(null);
     try {
       const r = await syncCoinspot(db.assets, addAsset, updateAsset);
-      setActionMsg(`CoinSpot synced: ${r.created + r.updated} holdings, ${money(r.totalAud)}.`);
+      setActionMsg(`CoinSpot: ${r.created + r.updated} holdings, ${money(r.totalAud)}`);
     } catch (e) {
       setActionMsg(e instanceof Error ? e.message : "CoinSpot sync failed");
     } finally {
@@ -134,35 +130,48 @@ export default function DashboardPage() {
   const hasCoinspot = providerGroups.some((g) => g.provider.toLowerCase() === "coinspot");
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Net worth" value={money(netWorth)} tone={netWorth >= 0 ? "good" : "bad"} />
-        <StatCard label="Assets" value={money(totalAssets)} />
-        <StatCard label="Liabilities" value={money(totalLiabilities)} tone={totalLiabilities > 0 ? "bad" : "default"} />
-        <StatCard
-          label="Monthly change"
-          value={monthlyChange ? money(monthlyChange.diff) : "—"}
-          sub={monthlyChange ? pct(monthlyChange.pct) : "Add a snapshot to track"}
-          tone={!monthlyChange ? "default" : monthlyChange.diff >= 0 ? "good" : "bad"}
-        />
-      </div>
+    <div className="space-y-5">
+      {/* Hero — the one number that matters */}
+      <section className="pt-3 pb-1">
+        <div className="label">Net worth</div>
+        <div className={`num text-[2.6rem] sm:text-6xl font-semibold leading-none ${netWorth >= 0 ? "text-white" : "text-danger"}`}>
+          {money(netWorth)}
+        </div>
+        <div className="mt-3 flex items-center gap-2 flex-wrap text-[13px]">
+          {monthlyChange && (
+            <span
+              className={`num inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${
+                monthlyChange.diff >= 0
+                  ? "text-accent border-accent/30 bg-accent/10"
+                  : "text-danger border-danger/30 bg-danger/10"
+              }`}
+            >
+              {monthlyChange.diff >= 0 ? "▲" : "▼"} {money(Math.abs(monthlyChange.diff))} · {pct(monthlyChange.pct)}
+            </span>
+          )}
+          <span className="num text-muted">
+            <span className="text-white/80">{money(totalAssets)}</span> assets
+          </span>
+          <span className="text-bg-ring">|</span>
+          <Link href="/liabilities" className="num text-muted hover:text-white">
+            <span className={totalLiabilities > 0 ? "text-danger/90" : "text-white/80"}>{money(totalLiabilities)}</span> debts
+          </Link>
+        </div>
+      </section>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Link href="/cashflow" className="card p-4 hover:border-accent/40 transition-colors">
-          <div className="label">Income · this month</div>
-          <div className="stat-num text-accent">{money(cashflowMonth.income)}</div>
-        </Link>
-        <Link href="/cashflow" className="card p-4 hover:border-accent/40 transition-colors">
-          <div className="label">Expenses · this month</div>
-          <div className="stat-num text-danger">{money(cashflowMonth.expenses)}</div>
-        </Link>
-        <Link href="/cashflow" className="card p-4 hover:border-accent/40 transition-colors">
-          <div className="label">Net savings</div>
-          <div className={`stat-num ${cashflowMonth.net >= 0 ? "text-accent" : "text-danger"}`}>
-            {money(cashflowMonth.net)}
+      {/* This month's cash flow — one strip, not three cards */}
+      <Link href="/cashflow" className="card flex items-stretch divide-x divide-bg-ring overflow-hidden hover:border-accent/30 transition-colors">
+        {[
+          { label: "In", value: cashflowMonth.income, cls: "text-accent" },
+          { label: "Out", value: cashflowMonth.expenses, cls: "text-danger" },
+          { label: "Saved", value: cashflowMonth.net, cls: cashflowMonth.net >= 0 ? "text-white" : "text-danger" },
+        ].map((c) => (
+          <div key={c.label} className="flex-1 px-4 py-3.5">
+            <div className="label !mb-0.5">{c.label} · {new Date().toLocaleDateString("en-AU", { month: "short" })}</div>
+            <div className={`num text-base sm:text-lg font-semibold ${c.cls}`}>{money(c.value)}</div>
           </div>
-        </Link>
-      </div>
+        ))}
+      </Link>
 
       {isEmpty && (
         <SectionCard title="Welcome">
@@ -181,79 +190,80 @@ export default function DashboardPage() {
 
       {db.assets.length > 0 && (
         <SectionCard
-          title="Holdings by provider"
+          title="Holdings"
           action={
             <div className="flex gap-2">
               {hasCoinspot && (
-                <button className="btn-ghost text-xs" onClick={doCoinspot} disabled={busy !== null}>
+                <button className="btn-ghost text-xs !py-1.5" onClick={doCoinspot} disabled={busy !== null}>
                   {busy === "coinspot" ? "Syncing…" : "Sync CoinSpot"}
                 </button>
               )}
-              <button className="btn-ghost text-xs" onClick={doRefresh} disabled={busy !== null}>
-                {busy === "refresh" ? "Refreshing…" : "Refresh prices"}
+              <button className="btn-ghost text-xs !py-1.5" onClick={doRefresh} disabled={busy !== null}>
+                {busy === "refresh" ? "…" : "Refresh prices"}
               </button>
             </div>
           }
         >
-          {actionMsg && <div className="text-xs text-accent mb-2">{actionMsg}</div>}
+          {actionMsg && <div className="num text-xs text-accent mb-2">{actionMsg}</div>}
           <ul className="divide-y divide-bg-ring">
             {providerGroups.map((g) => (
               <li key={g.provider} className="py-2.5 flex items-center gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{g.provider}</span>
-                    {g.stale && (
-                      <span
-                        className="h-2 w-2 rounded-full bg-amber-400 shrink-0"
-                        title="Some holdings have no live price or it's older than 24h"
-                      />
-                    )}
-                  </div>
-                  <div className="text-xs text-muted">{g.count} holding{g.count === 1 ? "" : "s"}</div>
+                <div className="min-w-0 flex-1 flex items-center gap-2">
+                  <span className="text-sm font-medium">{g.provider}</span>
+                  <span className="pill">{g.count}</span>
+                  {g.stale && (
+                    <span className="h-1.5 w-1.5 rounded-full bg-warn shrink-0" title="Prices need a refresh" />
+                  )}
                 </div>
-                <div className="text-sm font-semibold">{money(g.total)}</div>
+                <div className="num text-sm font-semibold">{money(g.total)}</div>
               </li>
             ))}
           </ul>
         </SectionCard>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionCard title="Asset allocation">
-          <AllocationPie data={allocation} />
-        </SectionCard>
-        <SectionCard title="Liability breakdown">
-          <AllocationPie data={liabilityBreakdown} />
-        </SectionCard>
-      </div>
+      <SectionCard
+        title="Breakdown"
+        action={
+          <div className="flex rounded-full border border-bg-ring p-0.5 text-xs">
+            {(["assets", "debts"] as const).map((b) => (
+              <button
+                key={b}
+                onClick={() => setBreakdown(b)}
+                className={`px-3 py-1 rounded-full capitalize transition-colors ${
+                  breakdown === b ? "bg-accent/15 text-accent" : "text-muted hover:text-white"
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+        }
+      >
+        <AllocationPie data={breakdown === "assets" ? allocation : liabilityBreakdown} />
+      </SectionCard>
 
       <SectionCard
         title="Net worth over time"
         action={
-          <button onClick={() => createSnapshot()} className="btn-primary text-xs px-2 py-1.5">
+          <button onClick={() => createSnapshot()} className="btn-primary text-xs !py-1.5">
             + Snapshot
           </button>
         }
       >
         <NetWorthArea data={history} />
         {history.length > 0 && (
-          <div className="text-xs text-muted mt-2">
-            Latest snapshot: {shortDate(history[history.length - 1].date)}
+          <div className="flex items-center justify-between mt-2 text-xs text-muted">
+            <span>Latest: {shortDate(history[history.length - 1].date)}</span>
+            <Link href="/history" className="hover:text-white">All snapshots →</Link>
           </div>
         )}
       </SectionCard>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Link href="/assets" className="card p-4 hover:border-accent/40 transition-colors">
-          <div className="text-xs text-muted">Manage</div>
-          <div className="text-base font-semibold">Assets →</div>
-          <div className="text-xs text-muted mt-1">{db.assets.length} item{db.assets.length === 1 ? "" : "s"}</div>
-        </Link>
-        <Link href="/liabilities" className="card p-4 hover:border-accent/40 transition-colors">
-          <div className="text-xs text-muted">Manage</div>
-          <div className="text-base font-semibold">Liabilities →</div>
-          <div className="text-xs text-muted mt-1">{db.liabilities.length} item{db.liabilities.length === 1 ? "" : "s"}</div>
-        </Link>
+      <div className="flex justify-center gap-5 text-[13px] text-muted pb-2">
+        <Link href="/transactions" className="hover:text-white">Transactions</Link>
+        <Link href="/history" className="hover:text-white">History</Link>
+        <Link href="/integrations" className="hover:text-white">Settings</Link>
       </div>
     </div>
   );

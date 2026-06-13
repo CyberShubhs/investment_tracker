@@ -6,10 +6,10 @@ const config: Config = {
     extend: {
       colors: {
         bg: {
-          base: "#07090d",
-          panel: "#0e1218",
-          card: "#131822",
-          ring: "#1c2433",
+          base: "#070a0f",
+          panel: "#0d121a",
+          card: "#10161f",
+          ring: "#1d2735",
         },
         accent: {
           DEFAULT: "#7cf5c0",
@@ -17,13 +17,15 @@ const config: Config = {
         },
         danger: "#ff6b6b",
         warn: "#f5b14d",
-        muted: "#7a869a",
+        muted: "#76839a",
       },
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "monospace"],
       },
       boxShadow: {
-        card: "0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.35)",
+        card: "0 1px 0 rgba(255,255,255,0.04) inset, 0 12px 32px rgba(0,0,0,0.4)",
+        bar: "0 -8px 32px rgba(0,0,0,0.55)",
       },
     },
   },

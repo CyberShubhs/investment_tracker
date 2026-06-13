@@ -7,10 +7,22 @@
 }
 
 html, body {
-  background: #07090d;
+  background: #070a0f;
   color: #e6edf7;
   min-height: 100%;
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Subtle atmosphere: a mint glow bleeding in from the top of the viewport. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(60% 38% at 50% -12%, rgba(124, 245, 192, 0.07), transparent 70%),
+    radial-gradient(45% 30% at 92% -8%, rgba(90, 169, 255, 0.05), transparent 70%);
 }
 
 * {
@@ -19,13 +31,13 @@ html, body {
 
 @layer components {
   .card {
-    @apply rounded-2xl bg-bg-card border border-bg-ring shadow-card;
+    @apply relative rounded-2xl bg-bg-card border border-bg-ring shadow-card;
   }
   .pill {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border border-bg-ring text-muted;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-mono tracking-tight rounded-full border border-bg-ring text-muted;
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors;
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-medium transition-all active:scale-[0.97];
   }
   .btn-primary {
     @apply btn bg-accent text-bg-base hover:bg-accent-dim;
@@ -37,16 +49,72 @@ html, body {
     @apply btn bg-danger/10 text-danger hover:bg-danger/20 border border-danger/30;
   }
   .input, .select, .textarea {
-    @apply w-full bg-bg-panel border border-bg-ring rounded-xl px-3 py-2 text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40;
+    @apply w-full bg-bg-panel border border-bg-ring rounded-xl px-3 py-2.5 text-[15px] sm:text-sm text-white placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/40;
   }
   .label {
-    @apply text-xs uppercase tracking-wider text-muted mb-1 block;
+    @apply font-mono text-[10px] uppercase tracking-[0.14em] text-muted mb-1.5 block;
+  }
+  /* All money/figures render in the mono with tabular digits. */
+  .num {
+    @apply font-mono tabular-nums tracking-tight;
   }
   .stat-num {
-    @apply text-2xl sm:text-3xl font-semibold text-white;
+    @apply num text-xl sm:text-2xl font-semibold text-white;
   }
 }
 
 /* hide scrollbar on horizontal mobile nav */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
+
+/* Staggered page-load reveal: sections drift up as they appear. */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+main > * {
+  animation: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+main > *:nth-child(2) { animation-delay: 0.05s; }
+main > *:nth-child(3) { animation-delay: 0.1s; }
+main > *:nth-child(4) { animation-delay: 0.15s; }
+main > *:nth-child(5) { animation-delay: 0.2s; }
+main > *:nth-child(n + 6) { animation-delay: 0.25s; }
+@media (prefers-reduced-motion: reduce) {
+  main > * { animation: none; }
+}
+
+/* Bottom tab bar (installed-app feel on phones). */
+.tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  background: rgba(10, 14, 20, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(29, 39, 53, 0.9);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.55);
+}
+.tabbar a {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 0 7px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #76839a;
+  transition: color 0.15s;
+}
+.tabbar a.active {
+  color: #7cf5c0;
+}
+.tabbar svg {
+  width: 21px;
+  height: 21px;
+}

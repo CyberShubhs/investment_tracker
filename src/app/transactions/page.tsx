@@ -183,7 +183,7 @@ export default function TransactionsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-semibold">{money(t.amount)}</div>
+                  <div className="num text-sm font-semibold">{money(t.amount)}</div>
                   <button className="text-xs text-danger hover:underline" onClick={() => removeTransaction(t.id)}>Delete</button>
                 </div>
               </li>

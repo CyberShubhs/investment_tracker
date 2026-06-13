@@ -198,7 +198,7 @@ export default function LiabilitiesPage() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-sm font-semibold text-danger">{money(l.balance)}</div>
+                <div className="num text-sm font-semibold text-danger">{money(l.balance)}</div>
                 <div className="flex gap-1 justify-end mt-1">
                   <button className="text-xs text-muted hover:text-white" onClick={() => startEdit(l)}>Edit</button>
                   <button className="text-xs text-danger hover:underline" onClick={() => removeLiability(l.id)}>Delete</button>

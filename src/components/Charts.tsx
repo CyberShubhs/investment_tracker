@@ -26,7 +26,7 @@ export function AllocationPie({ data }: { data: SlicePoint[] }) {
     return <div className="text-xs text-muted text-center py-10">No data yet</div>;
   }
   return (
-    <div className="h-56">
+    <div className="h-48 sm:h-56">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -49,14 +49,20 @@ export function AllocationPie({ data }: { data: SlicePoint[] }) {
           />
         </PieChart>
       </ResponsiveContainer>
-      <div className="grid grid-cols-2 gap-1 mt-2 text-xs">
-        {filtered.map((d, i) => (
-          <div key={d.name} className="flex items-center gap-2 truncate">
-            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
-            <span className="text-muted truncate">{d.name}</span>
-            <span className="ml-auto text-white/80">{money(d.value)}</span>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-3 text-xs">
+        {filtered
+          .slice()
+          .sort((a, b) => b.value - a.value)
+          .map((d) => {
+            const i = filtered.indexOf(d);
+            return (
+              <div key={d.name} className="flex items-center gap-2 truncate">
+                <span className="h-2 w-2 rounded-full shrink-0" style={{ background: PALETTE[i % PALETTE.length] }} />
+                <span className="text-muted truncate">{d.name}</span>
+                <span className="num ml-auto text-white/80">{money(d.value)}</span>
+              </div>
+            );
+          })}
       </div>
     </div>
   );

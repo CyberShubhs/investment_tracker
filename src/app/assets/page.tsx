@@ -345,7 +345,7 @@ export default function AssetsPage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className="text-sm font-semibold">{money(a.current_value)}</div>
+                          <div className="num text-sm font-semibold">{money(a.current_value)}</div>
                           <div className="flex gap-1 justify-end mt-1">
                             <button className="text-xs text-muted hover:text-white" onClick={() => startEdit(a)}>Edit</button>
                             <button className="text-xs text-danger hover:underline" onClick={() => removeAsset(a.id)}>Delete</button>
